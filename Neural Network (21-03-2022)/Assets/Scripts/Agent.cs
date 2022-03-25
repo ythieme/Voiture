@@ -20,8 +20,8 @@ public class Agent : MonoBehaviour, IComparable<Agent>
     public LayerMask layerMask;
     public LayerMask layerToAvoid;
     public float rayRange = 5f;
+    public float obstacleRayRange = 5f;
     public float malus = 0f;
-    public float bonus = 0f;
     public bool grounded;
 
 
@@ -32,7 +32,6 @@ public class Agent : MonoBehaviour, IComparable<Agent>
     {
         fitness = 0f;
         malus = 0f;
-        bonus = 0f;
         transform.position = Vector3.zero;
         transform.rotation = Quaternion.identity;
         rb.velocity = Vector3.zero;
@@ -64,16 +63,17 @@ public class Agent : MonoBehaviour, IComparable<Agent>
         inputs[4] = RaySensor(transform.position, transform.forward - transform.right , 2f, layerMask);
 
         //Vitesse du véhicule
-        inputs[5] = (float)Math.Tanh(rb.velocity.magnitude * 0.05f);
-        inputs[6] = (float)Math.Tanh(rb.angularVelocity.y * 0.1f);
+        /*inputs[5] = (float)Math.Tanh(rb.velocity.magnitude * 0.05f);
+        inputs[6] = (float)Math.Tanh(rb.angularVelocity.y * 0.1f);*/
 
         //Permet de garder le système en marche si
         //rien n'est detecté et que le véhicule ne bouge pas
-        inputs[7] = 1f;
-        inputs[8] = RaySensor(transform.position, transform.forward, 8f, layerToAvoid); 
-        inputs[9] = RaySensor(transform.position, transform.forward + transform.right, 4f, layerToAvoid); 
-        inputs[10] = RaySensor(transform.position, transform.forward - transform.right, 4f, layerToAvoid); 
-        inputs[11] = CheckGround(transform.position, -transform.up , 1f, layerMask); 
+        inputs[5] = 1f;
+        inputs[6] = CollisionSensor(transform.position, transform.forward, 6f, layerToAvoid, QueryTriggerInteraction.UseGlobal); 
+        inputs[7] = CollisionSensor(transform.position, transform.forward + transform.right, 4f, layerToAvoid, QueryTriggerInteraction.UseGlobal); 
+        inputs[8] = CollisionSensor(transform.position, transform.forward - transform.right, 4f, layerToAvoid, QueryTriggerInteraction.UseGlobal); 
+        inputs[9] = CollisionSensor(transform.position,transform.right, 4f, layerToAvoid, QueryTriggerInteraction.UseGlobal); 
+        inputs[10] = CollisionSensor(transform.position,- transform.right, 4f, layerToAvoid, QueryTriggerInteraction.UseGlobal); 
     }
 
     RaycastHit hit;
@@ -82,12 +82,29 @@ public class Agent : MonoBehaviour, IComparable<Agent>
         if (Physics.Raycast(origin, dir, out hit, length * rayRange, layerMask))
         {
             Debug.DrawRay(origin, dir * hit.distance, 
-                Color.Lerp(Color.red, Color.green, 1 - hit.distance / (length * rayRange)));
+                Color.Lerp(Color.blue, Color.black, 1 - hit.distance / (length * rayRange)));
             return 1 - (hit.distance / (length * rayRange));
         }
         else
         {
-            Debug.DrawRay(origin, dir * length * rayRange, Color.red);
+            Debug.DrawRay(origin, dir * length * rayRange, Color.blue);
+            return 0f;
+        }
+    }
+    float CollisionSensor(Vector3 origin, Vector3 dir, float length, LayerMask layerMask, QueryTriggerInteraction triggerInteraction)
+    {
+
+        if (Physics.Raycast(origin, dir, out hit, length * obstacleRayRange, layerMask))
+        {
+            triggerInteraction = QueryTriggerInteraction.Collide;
+            Debug.DrawRay(origin, dir * hit.distance,
+                Color.Lerp(Color.red, Color.green, 3 - hit.distance / (length * obstacleRayRange)));
+
+                return 1 - (hit.distance / (length * obstacleRayRange));
+        }
+        else
+        {
+            Debug.DrawRay(origin, dir * length * obstacleRayRange, Color.red);
             return 0f;
         }
     }
@@ -110,13 +127,13 @@ public class Agent : MonoBehaviour, IComparable<Agent>
     } 
     void UpdateFitness()
     {
-        distanceTraveled = (totalCheckpointDist + nextCheckpointDist - (nextCheckpoint.position - transform.position).magnitude) + bonus;
+        distanceTraveled = (totalCheckpointDist + nextCheckpointDist - (nextCheckpoint.position - transform.position).magnitude);
 
-        if (fitness < (distanceTraveled + bonus) - malus)
+        if (fitness < (distanceTraveled) - malus)
         {
             fitness = distanceTraveled - malus;
         }
-        else if (fitness > (distanceTraveled + bonus) - malus)
+        else if (fitness > (distanceTraveled) - malus)
         {
             fitness = distanceTraveled - malus;
         }
@@ -158,21 +175,5 @@ public class Agent : MonoBehaviour, IComparable<Agent>
         }
 
         return 0;
-    }
-    float CheckGround(Vector3 origin, Vector3 dir, float length, LayerMask layerMask)
-    {
-        if (Physics.Raycast(origin, dir, out hit, length * rayRange, layerMask))
-        {
-            Debug.DrawRay(origin, dir * hit.distance,
-                Color.Lerp(Color.red, Color.green, 1 - hit.distance / (length * rayRange)));
-            grounded = true;
-            return 1 - (hit.distance / (length * rayRange));
-        }
-        else
-        {
-            Debug.DrawRay(origin, dir * length * rayRange, Color.red);
-            grounded = false;
-            return 0f;
-        }
     }
 }

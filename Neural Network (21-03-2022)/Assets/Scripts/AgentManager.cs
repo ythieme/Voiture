@@ -26,6 +26,7 @@ public class AgentManager : MonoBehaviour
     public int generationCount = 0;
 
     public ProceduralManager pcManager;
+    public bool firstLoop = false;
 
     void Start()
     {
@@ -45,6 +46,7 @@ public class AgentManager : MonoBehaviour
     {
         agents.Sort();
         CarNumber();
+        Focus();
     }
 
     void NewGeneration()
@@ -54,7 +56,11 @@ public class AgentManager : MonoBehaviour
         ResetAgents();
         SetMaterials();
         GenerationCount();
-        generateTerrain();
+        if (firstLoop)
+        {
+            generateTerrain();
+        }
+        firstLoop = true;
     }
 
     void GenerationCount()
@@ -118,9 +124,9 @@ public class AgentManager : MonoBehaviour
 
     void Mutate()
     {
-        for (int i = agents.Count/2; i < agents.Count; i++)
+        for (int i = agents.Count/5; i < agents.Count; i++)
         {
-            agents[i].net.CopyNet(agents[i - agents.Count/2].net);
+            agents[i].net.CopyNet(agents[i - agents.Count/5].net);
             agents[i].net.Mutate(mutationRate);
 
             agents[i].SetMutatedMaterial();
@@ -138,7 +144,7 @@ public class AgentManager : MonoBehaviour
 
     void SetMaterials()
     {
-        for (int i = 1; i < agents.Count / 2; i++)
+        for (int i = 1; i < agents.Count / 5; i++)
         {
             agents[i].SetDefaultMaterial();
         }
@@ -212,8 +218,11 @@ public class AgentManager : MonoBehaviour
     void generateTerrain()
     {
         pcManager.InstantiatePrefab();
-        if (pcManager.tileGenerated.Count >= pcManager.numberOfTilesToGenerate)
+
+        if (pcManager.tilesUsed.Count == pcManager.numberOfTilesToGenerate)
         {
+            Debug.Log("coucou");
+            pcManager.generationToWait--;
             pcManager.DestroyTiles();
         }
     }
